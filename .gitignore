@@ -1,0 +1,10 @@
+build/*
+dist/*
+env2/*
+*.spec
+*.hdf5
+predict.py
+*.xlsx
+train.py
+.DS_Store
+.idea/
