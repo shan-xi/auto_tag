@@ -106,24 +106,38 @@ class Predict:
         self.result_show_place.text = self.label_map[test_seq_pre[0]]
 
     def batch_predict(self, file_path=None):
-        self.logger(self.console, f'批次預測檔案路徑: {file_path}')
-        seg_word_list = self.segmentWord.batch_seg(file_path)
+        try:
+            self.logger(self.console, f'批次預測檔案路徑: {file_path}')
+            seg_word_list = self.segmentWord.batch_seg(file_path)
 
-        max_words = 1000
-        max_len = 500
-        df_seg = pd.read_csv(self.training_segment_dataset)
-        df = pd.read_csv(self.training_dataset)
-        df = df[['store_prod_name', 'parent_tag']]
-        df_all = pd.concat([df, df_seg], axis=1)
-        tok = tf.keras.preprocessing.text.Tokenizer(num_words=max_words)
-        tok.fit_on_texts(df_all.seg_word.to_numpy())
+            max_words = 1000
+            max_len = 500
+            df_seg = pd.read_csv(self.training_segment_dataset)
+            df = pd.read_csv(self.training_dataset)
+            df = df[['store_prod_name', 'parent_tag']]
+            df_all = pd.concat([df, df_seg], axis=1)
+            tok = tf.keras.preprocessing.text.Tokenizer(num_words=max_words)
+            tok.fit_on_texts(df_all.seg_word.to_numpy())
 
-        text = seg_word_list
-        test_seq = tok.texts_to_sequences(text)
-        test_seq_mat = sequence.pad_sequences(test_seq,maxlen=max_len)
-        test_seq_pre = self.model.predict_classes(test_seq_mat)
-        for i, t in enumerate(text):
-            self.logger(self.console, f'{t} => {self.label_map[test_seq_pre[i]]}')
+            text = seg_word_list
+            test_seq = tok.texts_to_sequences(text)
+            test_seq_mat = sequence.pad_sequences(test_seq,maxlen=max_len)
+            test_seq_pre = self.model.predict_classes(test_seq_mat)
+            predict_list = list()
+            seg_wrod_list = list()
+
+            for i, t in enumerate(text):
+                self.logger(self.console, f'{t} => {self.label_map[test_seq_pre[i]]}')
+                predict_list.append(self.label_map[test_seq_pre[i]])
+                seg_wrod_list.append(t)
+
+            predict_df = pd.DataFrame(list(zip(predict_list, seg_wrod_list)), columns=['Tag','Seg_word'])
+            predict_df.to_csv('batch_predict_result.csv', index=False)
+
+            self.logger(self.console, '批次貼標結果: batch_predict_result.csv')
+
+        except Exception as ex:
+            self.logger(self.console, f'error:{ex}')
 
 class Train:
     def __init__(self, **kwargs):
@@ -314,6 +328,7 @@ class Main(App):
         component_7.predict_data_file_path = TextInput(hint_text='檔案路徑')
         component_7.add_widget(component_7.predict_data_file_path)
         self.predict_data_file_path = component_7.predict_data_file_path
+        self.predict_data_file_path.text = 'batch_predict.csv'
 
         self.component_8 = component_8 = BoxLayout(orientation='vertical')
         component_8.batch_predict_btn = Button(text="批次預測貼標")
