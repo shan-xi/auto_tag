@@ -8,3 +8,4 @@ predict.py
 train.py
 .DS_Store
 .idea/
+*.pyc

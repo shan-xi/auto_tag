@@ -39,6 +39,15 @@ import numpy as np
 
 __vserion__ = '1.0.0'
 
+import configparser
+
+config = configparser.ConfigParser()
+config.read_file(open(r'/Users/Shared/auto_tag/config'))
+model_path = config.get('config', 'model_path')
+training_dataset_path = config.get('config', 'training_dataset_path')
+training_segment_dataset_path = config.get('config', 'training_segment_dataset_path')
+batch_predict_result_path=config.get('config','batch_predict_result_path')
+
 
 class SegmentWord:
     def __init__(self):
@@ -69,10 +78,9 @@ class SegmentWord:
 
 class Predict:
     def __init__(self, **kwargs):
-        # from tf.keras.models import load_model
-        self.model = tf.keras.models.load_model("model.hdf5")
-        self.training_dataset = 'training_dataset.csv'
-        self.training_segment_dataset = 'training_segment_dataset.csv'
+        self.model = tf.keras.models.load_model(model_path)
+        self.training_dataset = training_dataset_path
+        self.training_segment_dataset = training_segment_dataset_path
         self.segmentWord = SegmentWord()
         self.label_map = {4: '餐飲', 0: '按摩', 2: '美顏/造型', 3: '運動休閒', 1: '旅遊'}
         self.console = kwargs['console']
@@ -93,12 +101,10 @@ class Predict:
         df = pd.read_csv(self.training_dataset)
         df = df[['store_prod_name', 'parent_tag']]
         df_all = pd.concat([df, df_seg], axis=1)
-        # from keras.preprocessing.text import Tokenizer
         tok = tf.keras.preprocessing.text.Tokenizer(num_words=max_words)
         tok.fit_on_texts(df_all.seg_word.to_numpy())
         text = [content]
         test_seq = tok.texts_to_sequences(text)
-        # from keras.preprocessing import sequence
         test_seq_mat = tf.keras.preprocessing.sequence.pad_sequences(test_seq, maxlen=max_len)
         test_seq_pre = self.model.predict_classes(test_seq_mat)
         result = [f'{t} => {self.label_map[test_seq_pre[i]]}' for i, t in enumerate(text)]
@@ -132,26 +138,25 @@ class Predict:
                 seg_wrod_list.append(t)
 
             predict_df = pd.DataFrame(list(zip(predict_list, seg_wrod_list)), columns=['Tag','Seg_word'])
-            predict_df.to_csv('batch_predict_result.csv', index=False)
+            predict_df.to_csv(batch_predict_result_path, index=False)
 
-            self.logger(self.console, '批次貼標結果: batch_predict_result.csv')
+            self.logger(self.console, f'批次貼標結果: {batch_predict_result_path}')
 
         except Exception as ex:
             self.logger(self.console, f'error:{ex}')
 
 class Train:
     def __init__(self, **kwargs):
-        # self.model = tf.keras.models.load_model("model.hdf5")
-        self.training_dataset = 'training_dataset.csv'
-        self.training_segment_dataset = 'training_segment_dataset.csv'
+        self.training_dataset = training_dataset_path
+        self.training_segment_dataset = training_segment_dataset_path
         self.console = kwargs['console']
         self.logger = kwargs['logger']
 
     def do_train(self, mode=None):
         try:
             self.logger(self.console, '準備開始訓練')
-            df_seg = pd.read_csv(f'./{self.training_segment_dataset}')
-            df = pd.read_csv(f'./{self.training_dataset}')
+            df_seg = pd.read_csv(self.training_segment_dataset)
+            df = pd.read_csv(self.training_dataset)
             df = df[['store_prod_name', 'parent_tag']]
             df_all = pd.concat([df, df_seg], axis=1)
             _y = df_all.parent_tag
@@ -198,10 +203,9 @@ class Train:
                 self.model.add(layers.Dense(5, activation='softmax'))
                 self.model.compile(loss="categorical_crossentropy", optimizer=Adam(), metrics=["accuracy"])
             else:
-                self.model = tf.keras.models.load_model("model.hdf5")
+                self.model = tf.keras.models.load_model(model_path)
 
-            filepath = "model.hdf5"
-            checkpoint = ModelCheckpoint(filepath, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
+            checkpoint = ModelCheckpoint(model_path, monitor='val_accuracy', verbose=1, save_best_only=True, mode='max')
             early_stopping = EarlyStopping(monitor='val_accuracy', patience=5, verbose=1)
             callbacks_list = [
                 checkpoint,
@@ -328,7 +332,6 @@ class Main(App):
         component_7.predict_data_file_path = TextInput(hint_text='檔案路徑')
         component_7.add_widget(component_7.predict_data_file_path)
         self.predict_data_file_path = component_7.predict_data_file_path
-        self.predict_data_file_path.text = 'batch_predict.csv'
 
         self.component_8 = component_8 = BoxLayout(orientation='vertical')
         component_8.batch_predict_btn = Button(text="批次預測貼標")

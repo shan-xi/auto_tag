@@ -11,14 +11,12 @@ click==7.1.2
 cycler==0.10.0
 docutils==0.16
 fasttext==0.9.1
-Flask==1.1.2
 flatbuffers==1.12
 gast==0.2.2
 google-auth==1.20.0
 google-auth-oauthlib==0.4.1
 google-pasta==0.2.0
 grpcio==1.31.0
-gunicorn==20.0.4
 h5py==2.10.0
 hanlp==2.0.0a46
 idna==2.10
@@ -74,7 +72,6 @@ tf-nightly==2.4.0.dev20200805
 threadpoolctl==2.1.0
 tqdm==4.48.2
 urllib3==1.25.10
-Werkzeug==1.0.1
 wrapt==1.12.1
 xlrd==1.2.0
 zipp==3.1.0
